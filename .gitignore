@@ -4,6 +4,10 @@
 *.so
 *.dylib
 
+# VS Code
+.vscode
+launch.json
+
 # Debug stuff
 debug*
 
