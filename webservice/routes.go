@@ -1,4 +1,4 @@
-package main
+package webservice
 
 import (
 	"net/http"
@@ -14,6 +14,12 @@ type Route struct {
 type Routes []Route
 
 var routes = Routes{
+	Route{
+		"HandleMain",
+		"GET",
+		"/",
+		HandleMain,
+	},
 	Route{
 		"GetPeople",
 		"GET",

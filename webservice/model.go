@@ -1,4 +1,4 @@
-package main
+package webservice
 
 // Person Type (more like an object)
 type Person struct {

@@ -1,11 +1,16 @@
-package main
+package webservice
 
 import (
 	"encoding/json"
 	"net/http"
+	"fmt"
 
 	"github.com/gorilla/mux"
 )
+
+func HandleMain(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprint(w, "Hello, world!")
+}
 
 // GetPeople displays all from the people var
 func GetPeople(w http.ResponseWriter, r *http.Request) {
