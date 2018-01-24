@@ -1,5 +1,12 @@
 runtime: go
 api_version: go1
 handlers:
+
+- url: /profile/.*
+  script: _go_app
+  login: admin #required to remove admin.
+  auth_fail_action: unauthorized
+
 - url: /.*
   script: _go_app
+  auth_fail_action: unauthorized  

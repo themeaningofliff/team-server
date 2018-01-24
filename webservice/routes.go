@@ -15,10 +15,16 @@ type Routes []Route
 
 var routes = Routes{
 	Route{
-		"HandleMain",
+		"Welcome",
 		"GET",
 		"/",
-		HandleMain,
+		Welcome,
+	},
+	Route{
+		"AuthCallback",
+		"GET",
+		"/oauth2callback",
+		AuthCallback,
 	},
 	Route{
 		"GetPeople",
