@@ -8,10 +8,9 @@ type Player struct {
 	Email     string   `json:"email,omitempty"`
 	Phone     string   `json:"phone,omitempty"`
 	Address   *Address `json:"address,omitempty"`
-	// CreatedOn Time.time `json:"created_on,omitempty"`
-	CreatedOn string `json:"created_on,omitempty"`
-	Active    bool   `json:"active,omitempty"`
-	SignedUp  bool   `json:"signed_up,omitempty"`
+	CreatedOn string   `json:"created_on,string,omitempty"`
+	Active    bool     `json:"active,omitempty"`
+	SignedUp  bool     `json:"signed_up,omitempty"`
 }
 
 // Address Type
@@ -45,21 +44,19 @@ type PlayerGame struct {
 // PlayerGames - group of games a player plays
 var playerGames []PlayerGame
 
-// Game - game played with details
-type Game struct {
-	ID               int `json:"id,omitempty"`
-	GameDefinitionID int `json:"game_definition_id,omitempty"`
-	// GameStarted      Time.time `json:"game_started,omitempty"`
-	// CreatedOn        Time.time `json:"created_on,omitempty"`
-	GameStarted string `json:"game_started,omitempty"`
-	CreatedOn   string `json:"created_on,omitempty"`
+// Event - game played with details
+type Event struct {
+	ID               int    `json:"id,omitempty"`
+	GameDefinitionID int    `json:"game_definition_id,omitempty"`
+	GameStarted      string `json:"game_started,omitempty"`
+	CreatedOn        string `json:"created_on,omitempty"`
 }
 
 // Games - group of games
-var games []Game
+var events []Event
 
-// GameScore - scores of players by game
-type GameScore struct {
+// EventScore - scores of players by game
+type EventScore struct {
 	ID       int `json:"id,omitempty"`
 	GameID   int `json:"game_id,omitempty"`
 	PlayerID int `json:"player_id,omitempty"`
