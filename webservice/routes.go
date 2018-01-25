@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// Route - defines struct of routes
 type Route struct {
 	Name        string
 	Method      string
@@ -11,31 +12,32 @@ type Route struct {
 	HandlerFunc http.HandlerFunc
 }
 
+// Routes - a collection of Route
 type Routes []Route
 
 var routes = Routes{
 	Route{
-		"GetPeople",
+		"GetPlayers",
 		"GET",
-		"/people",
-		GetPeople,
+		"/players",
+		GetPlayers,
 	},
 	Route{
-		"GetPerson",
+		"GetPlayer",
 		"GET",
-		"/people/{id}",
-		GetPerson,
+		"/players/{id}",
+		GetPlayer,
 	},
 	Route{
-		"CreatePerson",
+		"CreatePlayer",
 		"POST",
-		"/people/{id}",
-		CreatePerson,
+		"/players/{id}",
+		CreatePlayer,
 	},
 	Route{
-		"DeletePerson",
+		"DeletePlayer",
 		"DELETE",
 		"/people/{id}",
-		DeletePerson,
+		DeletePlayer,
 	},
 }
