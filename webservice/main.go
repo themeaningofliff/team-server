@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	oidc "github.com/coreos/go-oidc"
+
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -19,6 +21,7 @@ type Credentials struct {
 
 var oauthCred Credentials
 var oauthCfg *oauth2.Config
+var oauthVerifier *oidc.IDTokenVerifier
 
 // main function to boot up everything
 func init() {
@@ -48,6 +51,18 @@ func init() {
 			"https://www.googleapis.com/auth/userinfo.email", // You have to select your own scope from here -> https://developers.google.com/identity/protocols/googlescopes#google_sign-in
 		},
 	}
+
+	// construct an oauth verifier for Google Accounts.
+	// TODO: We are using OIDC, a non-Google API to do this. If Google ever releases one, we should use theirs.
+	// https://developers.google.com/identity/sign-in/android/backend-auth
+	provider, err := oidc.NewProvider(oauth2.NoContext, "https://accounts.google.com")
+	if err != nil {
+		log.Fatal(err)
+	}
+	oidcConfig := &oidc.Config{
+		ClientID: oauthCred.Cid,
+	}
+	oauthVerifier = provider.Verifier(oidcConfig)
 
 	// setup router.
 	var router = NewRouter()

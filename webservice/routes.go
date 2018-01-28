@@ -14,11 +14,12 @@ type Route struct {
 type Routes []Route
 
 var routes = Routes{
+	// Front End
 	Route{
-		"Welcome",
+		"WelcomePage",
 		"GET",
 		"/",
-		Welcome,
+		WelcomePage,
 	},
 	Route{
 		"AuthCallback",
@@ -26,6 +27,8 @@ var routes = Routes{
 		"/oauth2callback",
 		AuthCallback,
 	},
+
+	// Back End
 	Route{
 		"GetPeople",
 		"GET",
