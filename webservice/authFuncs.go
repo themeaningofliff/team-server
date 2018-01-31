@@ -1,9 +1,12 @@
 package webservice
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
+	"github.com/gorilla/context"
 	"golang.org/x/oauth2"
 	oauth2ClientAPI "google.golang.org/api/oauth2/v2"
 )
@@ -21,6 +24,7 @@ func verifyTokenAPI(idToken string) (*oauth2ClientAPI.Tokeninfo, error) {
 	tokenInfoCall.IdToken(idToken)
 	tokenInfo, err := tokenInfoCall.Do()
 	if err != nil {
+		log.Println("Failed to verify GoogleAPI ID Token: " + err.Error())
 		return nil, err
 	}
 
@@ -33,7 +37,8 @@ func verifyToken(rawIDToken string) {
 	/*
 		2018/01/27 17:58:49 Token :  eyJhbGciOiJSUzI1NiIsImtpZCI6IjI2YzAxOGIyMzNmZTJlZWY0N2ZlZGJiZGQ5Mzk4MTcwZmM5YjI5ZDgifQ.eyJhenAiOiI.....
 
-		An ID Token is a JWT (JSON Web Token), that is, a cryptographically signed Base64-encoded JSON object. Normally, it is critical that you validate an ID token before you use it,
+		// https://stackoverflow.com/questions/8311836/how-to-identify-a-google-oauth2-user/13016081#13016081
+		An ID Token is a JWT (JSON Web Token) part of OpenID Connect, that is, a cryptographically signed Base64-encoded JSON object. Normally, it is critical that you validate an ID token before you use it,
 		but since you are communicating directly with Google over an intermediary-free HTTPS channel and using your client secret to authenticate yourself to Google, you can be confident that the
 		token you receive really comes from Google and is valid. If your server passes the ID token to other components of your app, it is extremely important that the other components
 		validate the token before using it.
@@ -61,17 +66,37 @@ func verifyToken(rawIDToken string) {
 	}
 	pprint(idToken, "OIDC id token")
 
+	// var claims struct {
+	// 	Email         string `json:"email"`
+	// 	EmailVerified bool   `json:"email_verified"`
+	// }
+	// if err := idToken.Claims(&claims); err != nil {
+	// 	log.Println("Failed to get claims off OIDC ID Token: " + err.Error())
+	// 	return
+	// }
+	// pprint(claims, "IDTokenClaims: ")
+
+	var newClaims = struct {
+		IDTokenClaims *json.RawMessage // ID Token payload is just JSON.
+	}{new(json.RawMessage)}
+
+	if err := idToken.Claims(&newClaims.IDTokenClaims); err != nil {
+		log.Println("Failed to get claims off OIDC ID Token: " + err.Error())
+		return
+	}
+
+	pprint(newClaims.IDTokenClaims, "IDTokenClaims: ")
+
 	// try the GoogleAPI Token Verifier (under the hood this requires a http call to a Google Endpoint)
 	tokenInfo, error := verifyTokenAPI(rawIDToken)
 	if error != nil {
 		// http.Error(w, "Failed to verify OIDC ID Token: "+err.Error(), http.StatusInternalServerError)
-		log.Println("Failed to verify GoogleAPI ID Token: " + err.Error())
 		return
 	}
 	pprint(tokenInfo, "GoogleAPI id token")
 
 	/*
-
+		2018/01/28 11:10:22 OIDC id token
 		{
 		    "Issuer": "accounts.google.com",
 		    "Audience": [
@@ -82,6 +107,18 @@ func verifyToken(rawIDToken string) {
 		    "IssuedAt": "2018-01-27T21:26:09-05:00",
 		    "Nonce": "",
 		    "AccessTokenHash": "rldghiB4Walnp9odvCAjUQ"
+		}
+		2018/01/31 07:54:33 IDTokenClaims:
+		{
+			"azp": "379625204959-4t2js39veijsiopjog6e2rtfruo0qrb3.apps.googleusercontent.com",
+			"aud": "379625204959-4t2js39veijsiopjog6e2rtfruo0qrb3.apps.googleusercontent.com",
+			"sub": "100682826382643775970",
+			"email": "omarhafezau@gmail.com",
+			"email_verified": true,
+			"at_hash": "4CJLvsaQNF-MiNwRRxZnHQ",
+			"exp": 1517406869,
+			"iss": "accounts.google.com",
+			"iat": 1517403269
 		}
 		2018/01/27 21:26:09 GoogleAPI id token
 		 {
@@ -94,4 +131,78 @@ func verifyToken(rawIDToken string) {
 		}
 
 	*/
+}
+
+type Exception struct {
+	Message string `json:"message"`
+}
+
+func ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		authorizationHeader := req.Header.Get("authorization")
+		if authorizationHeader != "" {
+			bearerToken := strings.Split(authorizationHeader, " ")
+			if len(bearerToken) == 2 {
+				// try the GoogleAPI Token Verifier (under the hood this requires a http call to a Google Endpoint)
+				// according to https://developers.google.com/identity/sign-in/web/backend-auth, there is nothing wrong with using the id token to auth the user.
+				tokenInfo, err := verifyTokenAPI(bearerToken[1])
+				if err != nil {
+					log.Println("Invalid authorization token: " + err.Error())
+					http.Error(w, "Invalid authorization token", http.StatusInternalServerError)
+					return
+				}
+				context.Set(req, "user_id", tokenInfo.UserId)
+				context.Set(req, "email", tokenInfo.Email)
+				context.Set(req, "verified_email", tokenInfo.VerifiedEmail)
+
+				next(w, req)
+				// token, error := jwt.Parse(bearerToken[1],
+				// 	func(token *jwt.Token) (interface{}, error) {
+				// 		pprint(token, "Bearer Token")
+				// 		/*
+				// 					"Name": "RS256",
+				// 					"Hash": 5
+				// 				},
+				// 				"Header": {
+				// 					"alg": "RS256",
+				// 					"kid": "26c018b233fe2eef47fedbbdd9398170fc9b29d8"
+				// 				},
+				// 				"Claims": {
+				// 					"at_hash": "UFbG3Mxnpb98V0e7BW54lg",
+				// 					"aud": "379625204959-4t2js39veijsiopjog6e2rtfruo0qrb3.apps.googleusercontent.com",
+				// 					"azp": "379625204959-4t2js39veijsiopjog6e2rtfruo0qrb3.apps.googleusercontent.com",
+				// 					"email": "omarhafezau@gmail.com",
+				// 					"email_verified": true,
+				// 					"exp": 1517406187,
+				// 					"iat": 1517402587,
+				// 					"iss": "accounts.google.com",
+				// 					"sub": "100682826382643775970"
+				// 				},
+				// 				"Signature": "",
+				// 				"Valid": false
+				// 			}
+				// 		*/
+
+				// 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				// 			return nil, fmt.Errorf("There was an error")
+				// 		}
+
+				// 		return []byte("secret"), nil
+				// 	})
+				// if error != nil {
+				// 	json.NewEncoder(w).Encode(Exception{Message: error.Error()})
+				// 	return
+				// }
+
+				// if token.Valid {
+				// 	context.Set(req, "decoded", token.Claims)
+				// 	next(w, req)
+				// } else {
+				// 	json.NewEncoder(w).Encode(Exception{Message: "Invalid authorization token"})
+				// }
+			}
+		} else {
+			json.NewEncoder(w).Encode(Exception{Message: "An authorization header is required"})
+		}
+	})
 }

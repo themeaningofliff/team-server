@@ -10,6 +10,7 @@ import (
 
 	oauth2 "golang.org/x/oauth2"
 	// Google API Client
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 )
@@ -69,9 +70,9 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/*
-		2018/01/27 17:58:49 Token :  {"access_token":"ya29.GlxPBU3mtkuc738UlO_40zAfperHAnQEn_ushyoBFTsiETy1uIuznIuE08nTgNKw2oEQ4iuPhRgG4u1W0uyoUvaYHUI8RPy3lEG-TVE3TpqlvQpso-k5Z8t8dS15sA","token_type":"Bearer","expiry":"2018-01-27T18:58:49.7588939-05:00"}
+	pprint(tkn, "Token")
 
+	/*
 		token {
 			access_token	A token that can be sent to a Google API.
 			id_token	A JWT that contains identity information about the user that is digitally signed by Google.
@@ -79,30 +80,16 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 			token_type	Identifies the type of token returned. At this time, this field always has the value Bearer.
 			refresh_token (optional)	This field is only present if access_type=offline is included in the authentication request. For details, see Refresh tokens.
 		}
+
+		Example:
+		018/01/31 07:06:17 Token
+		{
+			"access_token": "ya29.GlxTBRS9CNhLTCRIp3qgTZ9uwSOYGxAVo09qjFB2b8rdtfcjPGQmmHWTr1zae83YM3vy4HrITafvdxt5dXT2eXeYFE8bP2vzz0cLGa9fyR9SfafQSeuOqAOv2Q-mCw",
+			"token_type": "Bearer",
+			"expiry": "2018-01-31T08:06:17.2414786-05:00"
+		}
+
 	*/
-
-	/* *********************************************************************************************************
-	*
-	*   START TEST CODE to see if the verify token code works.
-	*
-	 */
-
-	pprint(tkn, "Token")
-
-	// get the raw token.
-	rawIDToken, ok := tkn.Extra("id_token").(string)
-	if !ok {
-		http.Error(w, "No id_token field in oauth2 token.", http.StatusInternalServerError)
-		return
-	}
-
-	verifyToken(rawIDToken)
-
-	/*
-	*
-	*   END TEST CODE to see if the verify token code works.
-	*
-	* ******************************************************************************************************** */
 
 	// Now we have the user's token, we can create a client to hit the Google API we want.
 	client := oauthCfg.Client(oauth2.NoContext, tkn)

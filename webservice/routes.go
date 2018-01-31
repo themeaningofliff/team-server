@@ -33,7 +33,7 @@ var routes = Routes{
 		"GetPeople",
 		"GET",
 		"/people",
-		GetPeople,
+		ValidateHandler(GetPeople),
 	},
 	Route{
 		"GetPerson",
