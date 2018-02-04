@@ -26,8 +26,8 @@ var oauthVerifier *oidc.IDTokenVerifier
 // main function to boot up everything
 func init() {
 	// dummy data
-	people = append(people, Person{ID: "1", Firstname: "John", Lastname: "Doe", Address: &Address{City: "City X", State: "State X"}})
-	people = append(people, Person{ID: "2", Firstname: "Koko", Lastname: "Doe", Address: &Address{City: "City Z", State: "State Y"}})
+	people = append(people, Person{ID: "1", Email: "john@doe.com", Firstname: "John", Lastname: "Doe", Address: &Address{City: "City X", State: "State X"}})
+	people = append(people, Person{ID: "2", Email: "Koko@doe.com", Firstname: "Koko", Lastname: "Doe", Address: &Address{City: "City Z", State: "State Y"}})
 
 	// read the credentials.
 	file, err := ioutil.ReadFile("./creds.json")

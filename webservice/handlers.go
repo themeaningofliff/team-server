@@ -3,6 +3,7 @@ package webservice
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -15,19 +16,6 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-type UserInfo struct {
-	Sub           string `json:"sub"`
-	Name          string `json:"name"`
-	GivenName     string `json:"given_name"`
-	FamilyName    string `json:"family_name"`
-	Profile       string `json:"profile"`
-	Picture       string `json:"picture"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	Gender        string `json:"gender"`
-	Hd            string `json:"hd"`
-}
-
 var state string
 var store = sessions.NewCookieStore([]byte("secret")) // TODO: This probably needs to be changed.
 
@@ -39,7 +27,18 @@ func WelcomePage(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "sess")
 	session.Values["state"] = state
 	session.Save(r, w)
-	w.Write([]byte("<html><title>Golang Google</title> <body> <a href='" + oauthCfg.AuthCodeURL(state) + "'><button>Login with Google!</button> </a> </body></html>"))
+	w.Write([]byte("<html><title>Welcome</title> <body><H2>Welcome!</H2><BR><a href='" + oauthCfg.AuthCodeURL(state) + "'><button>Login with Google!</button> </a> </body></html>"))
+}
+
+// WelcomePage greets a user who has found the site and presents them with a Login with Google button.
+func LoginAgain(w http.ResponseWriter, r *http.Request) {
+	// State can be some kind of random generated hash string.
+	// See relevant RFC: http://tools.ietf.org/html/rfc6749#section-10.12
+	state = randToken()
+	session, _ := store.Get(r, "sess")
+	session.Values["state"] = state
+	session.Save(r, w)
+	w.Write([]byte("<html><title>Login</title> <body><H2>You've been logged off. Please login again</H2><BR><a href='" + oauthCfg.AuthCodeURL(state) + "'><button>Login with Google!</button> </a> </body></html>"))
 }
 
 // AuthCallback is where the user is directed to after logging in with Google.
@@ -65,6 +64,7 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: Read this later - https://tools.ietf.org/html/rfc6819
 	if !tkn.Valid() {
 		fmt.Fprintln(w, "retreived invalid token")
 		return
@@ -91,57 +91,96 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	*/
 
-	// Now we have the user's token, we can create a client to hit the Google API we want.
-	client := oauthCfg.Client(oauth2.NoContext, tkn)
-
-	// get the data for the scope we requested.
-	userinfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
-	if err != nil {
-		log.Println("error getting userinfo")
-		return
-	}
-
-	defer userinfo.Body.Close()
-	data, _ := ioutil.ReadAll(userinfo.Body)
-	log.Println("User Info Profile: ", string(data))
-	var result UserInfo
-	json.Unmarshal(data, &result)
-
-	// just for fun, insert them in People.
-
-	person := Person{}
-	person.ID = strconv.Itoa(len(people) + 1)
-	person.Firstname = result.GivenName
-	person.Lastname = result.FamilyName
-	people = append(people, person)
-
-	session.Values["email"] = result.Email
-	session.Values["accessToken"] = tkn.AccessToken
-	session.Save(r, w)
-
-	// redirect to the page after they have authed.
-	http.Redirect(w, r, "/people", 302)
-
-}
-
-func tokenSignIn(w http.ResponseWriter, r *http.Request) {
-
-	// get the token.
-	// rawIDToken, ok := tkn.Extra("id_token").(string)
-	// if !ok {
-	// 	http.Error(w, "No id_token field in oauth2 token.", http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// verifyToken(rawIDToken)
-
 	// After obtaining user information from the ID token, you should query your app's user database. If the user already exists in your database, you should start an application session for that user.
 	// If the user does not exist in your user database, you should redirect the user to your new-user sign-up flow. You may be able to auto-register the user based on the information you receive from Google,
 	// or at the very least you may be able to pre-populate many of the fields that you require on your registration form. In addition to the information in the ID token, you can get additional user profile
 	// information at our user profile endpoints.
 	// https://developers.google.com/identity/protocols/OpenIDConnect
 
-	// so we should create a new session if needed.
+	// get the raw OpenID token.
+	rawIDToken, ok := tkn.Extra("id_token").(string)
+	if !ok {
+		http.Error(w, "No id_token field in oauth2 token.", http.StatusInternalServerError)
+		return
+	}
+
+	pprint(rawIDToken, "ID Token")
+
+	// verify & parse the token
+	tokenInfo, err := verifyTokenAPI(rawIDToken)
+	if err != nil {
+		log.Println("Invalid authorization token: " + err.Error())
+		http.Error(w, "Invalid authorization token", http.StatusInternalServerError)
+		return
+	}
+
+	if tokenInfo.VerifiedEmail {
+		var existingUser = PersonAlreadyExistsByEmail(tokenInfo.Email)
+
+		if !existingUser {
+			// the user does not have an account, we should redirect them to a create profile page
+			// that is pre-populated with details we have got from Google.
+
+			// Now we have the user's token, we can create a client to hit the Google API we want.
+			client := oauthCfg.Client(oauth2.NoContext, tkn)
+
+			// get the data for the scope we requested - in this case, Google Profile UserInfo
+			userinfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
+			if err != nil {
+				log.Println("error getting userinfo")
+				return
+			}
+
+			defer userinfo.Body.Close()
+			data, _ := ioutil.ReadAll(userinfo.Body)
+			log.Println("User Info Profile: ", string(data))
+			var userProfile UserInfo
+			json.Unmarshal(data, &userProfile)
+
+			// The problem with this token is we have to pass it in plain text in the html
+			// TODO: Look into http://www.gorillatoolkit.org/pkg/csrf or https://github.com/justinas/nosurf
+			var f interface{}
+			f = map[string]interface{}{
+				"Firstname":  userProfile.GivenName,
+				"Lastname":   userProfile.FamilyName,
+				"Email":      userProfile.Email,
+				"tokenField": rawIDToken,
+			}
+			t, err := template.ParseFiles("./webservice/createProfile.html")
+			if err != nil {
+				log.Println("error parsing template " + err.Error())
+				return
+			}
+			err = t.Execute(w, f)
+			if err != nil {
+				log.Println("error executing template " + err.Error())
+				return
+			}
+
+			// To test that the above "is user" check works, insert them in People so next time we refresh it doesn't do this.
+			// person := Person{}
+			// person.ID = strconv.Itoa(len(people) + 1)
+			// person.Email = userProfile.Email
+			// person.Firstname = userProfile.GivenName
+			// person.Lastname = userProfile.FamilyName
+			// people = append(people, person)
+
+			// session.Values["email"] = userProfile.Email
+			// session.Values["accessToken"] = tkn.AccessToken
+			// session.Save(r, w)
+
+		} else {
+			// the user has an account already, redirect to people.
+			pprint(tokenInfo, "Found existing User")
+			w.Header().Set("Authorization", "Bearer "+rawIDToken)
+			http.Redirect(w, r, "/people", 302)
+		}
+	} else {
+		pprint(tokenInfo, "Unverified email in Token")
+		http.Error(w, "Unverified Email", http.StatusInternalServerError)
+		return
+	}
+
 }
 
 // GetPeople displays all from the people var
@@ -166,11 +205,17 @@ func GetPerson(w http.ResponseWriter, r *http.Request) {
 // CreatePerson creates a new item
 func CreatePerson(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
+	// params := mux.Vars(r)
 	var person Person
 	_ = json.NewDecoder(r.Body).Decode(&person)
-	person.ID = params["id"]
-	people = append(people, person)
+	if !PersonAlreadyExistsByEmail(person.Email) {
+		log.Println("Creating Person with email " + person.Email)
+		person.ID = strconv.Itoa(len(people) + 1)
+		people = append(people, person)
+	} else {
+		log.Println("Person already exists with email " + person.Email)
+	}
+
 	json.NewEncoder(w).Encode(people)
 }
 

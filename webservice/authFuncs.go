@@ -64,37 +64,6 @@ func verifyToken(rawIDToken string) {
 		log.Println("Failed to verify OIDC ID Token: " + err.Error())
 		return
 	}
-	pprint(idToken, "OIDC id token")
-
-	// var claims struct {
-	// 	Email         string `json:"email"`
-	// 	EmailVerified bool   `json:"email_verified"`
-	// }
-	// if err := idToken.Claims(&claims); err != nil {
-	// 	log.Println("Failed to get claims off OIDC ID Token: " + err.Error())
-	// 	return
-	// }
-	// pprint(claims, "IDTokenClaims: ")
-
-	var newClaims = struct {
-		IDTokenClaims *json.RawMessage // ID Token payload is just JSON.
-	}{new(json.RawMessage)}
-
-	if err := idToken.Claims(&newClaims.IDTokenClaims); err != nil {
-		log.Println("Failed to get claims off OIDC ID Token: " + err.Error())
-		return
-	}
-
-	pprint(newClaims.IDTokenClaims, "IDTokenClaims: ")
-
-	// try the GoogleAPI Token Verifier (under the hood this requires a http call to a Google Endpoint)
-	tokenInfo, error := verifyTokenAPI(rawIDToken)
-	if error != nil {
-		// http.Error(w, "Failed to verify OIDC ID Token: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	pprint(tokenInfo, "GoogleAPI id token")
-
 	/*
 		2018/01/28 11:10:22 OIDC id token
 		{
@@ -108,6 +77,30 @@ func verifyToken(rawIDToken string) {
 		    "Nonce": "",
 		    "AccessTokenHash": "rldghiB4Walnp9odvCAjUQ"
 		}
+	*/
+	pprint(idToken, "OIDC id token")
+
+	// get all the "claims" - additional info - from the token.
+	var newClaims = struct {
+		IDTokenClaims *json.RawMessage // ID Token payload is just JSON.
+	}{new(json.RawMessage)}
+
+	// get just the email related claims.
+	// var claims struct {
+	// 	Email         string `json:"email"`
+	// 	EmailVerified bool   `json:"email_verified"`
+	// }
+	// if err := idToken.Claims(&claims); err != nil {
+	// 	log.Println("Failed to get claims off OIDC ID Token: " + err.Error())
+	// 	return
+	// }
+
+	if err := idToken.Claims(&newClaims.IDTokenClaims); err != nil {
+		log.Println("Failed to get claims off OIDC ID Token: " + err.Error())
+		return
+	}
+
+	/*
 		2018/01/31 07:54:33 IDTokenClaims:
 		{
 			"azp": "379625204959-4t2js39veijsiopjog6e2rtfruo0qrb3.apps.googleusercontent.com",
@@ -120,6 +113,17 @@ func verifyToken(rawIDToken string) {
 			"iss": "accounts.google.com",
 			"iat": 1517403269
 		}
+	*/
+	pprint(newClaims.IDTokenClaims, "IDTokenClaims: ")
+
+	// try the GoogleAPI Token Verifier (under the hood this requires a http call to a Google Endpoint)
+	tokenInfo, error := verifyTokenAPI(rawIDToken)
+	if error != nil {
+		// http.Error(w, "Failed to verify OIDC ID Token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	/*
 		2018/01/27 21:26:09 GoogleAPI id token
 		 {
 		    "audience": "379625204959-4t2js39veijsiopjog6e2rtfruo0qrb3.apps.googleusercontent.com",
@@ -131,12 +135,11 @@ func verifyToken(rawIDToken string) {
 		}
 
 	*/
+	pprint(tokenInfo, "GoogleAPI id token")
+
 }
 
-type Exception struct {
-	Message string `json:"message"`
-}
-
+// ValidateHandler wraps a standard http handler in an auth check to make sure they have a valid token.
 func ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		authorizationHeader := req.Header.Get("authorization")
@@ -151,9 +154,11 @@ func ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
 					http.Error(w, "Invalid authorization token", http.StatusInternalServerError)
 					return
 				}
-				context.Set(req, "user_id", tokenInfo.UserId)
-				context.Set(req, "email", tokenInfo.Email)
-				context.Set(req, "verified_email", tokenInfo.VerifiedEmail)
+
+				// set the necessary details on the context for use in the next handler.
+				context.Set(req, "user_id", tokenInfo.UserId)               // "user_id": "100682826382643775970",
+				context.Set(req, "email", tokenInfo.Email)                  // "email": "omarhafezau@gmail.com",
+				context.Set(req, "verified_email", tokenInfo.VerifiedEmail) // "verified_email": true
 
 				next(w, req)
 				// token, error := jwt.Parse(bearerToken[1],
@@ -202,7 +207,9 @@ func ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
 				// }
 			}
 		} else {
-			json.NewEncoder(w).Encode(Exception{Message: "An authorization header is required"})
+			// TODO: should probably re-direct to login page.
+			LoginAgain(w, req)
+			// json.NewEncoder(w).Encode(Exception{Message: "An authorization header is required"})
 		}
 	})
 }

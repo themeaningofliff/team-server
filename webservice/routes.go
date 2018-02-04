@@ -39,18 +39,18 @@ var routes = Routes{
 		"GetPerson",
 		"GET",
 		"/people/{id}",
-		GetPerson,
+		ValidateHandler(GetPerson),
 	},
 	Route{
 		"CreatePerson",
 		"POST",
-		"/people/{id}",
-		CreatePerson,
+		"/createPerson",
+		ValidateHandler(CreatePerson),
 	},
 	Route{
 		"DeletePerson",
 		"DELETE",
 		"/people/{id}",
-		DeletePerson,
+		ValidateHandler(DeletePerson),
 	},
 }
