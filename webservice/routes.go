@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// Route - defines struct of routes
 type Route struct {
 	Name        string
 	Method      string
@@ -11,6 +12,7 @@ type Route struct {
 	HandlerFunc http.HandlerFunc
 }
 
+// Routes - a collection of Route
 type Routes []Route
 
 var routes = Routes{
@@ -30,27 +32,27 @@ var routes = Routes{
 
 	// Back End
 	Route{
-		"GetPeople",
+		"GetPlayers",
 		"GET",
-		"/people",
-		ValidateHandler(GetPeople),
+		"/players",
+		ValidateHandler(GetPlayers),
 	},
 	Route{
-		"GetPerson",
+		"GetPlayer",
 		"GET",
-		"/people/{id}",
-		ValidateHandler(GetPerson),
+		"/players/{id}",
+		ValidateHandler(GetPlayer),
 	},
 	Route{
-		"CreatePerson",
+		"CreatePlayer",
 		"POST",
-		"/createPerson",
-		ValidateHandler(CreatePerson),
+		"/createPlayer",
+		ValidateHandler(CreatePlayer),
 	},
 	Route{
-		"DeletePerson",
+		"DeletePlayer",
 		"DELETE",
-		"/people/{id}",
-		ValidateHandler(DeletePerson),
+		"/players/{id}",
+		ValidateHandler(DeletePlayer),
 	},
 }

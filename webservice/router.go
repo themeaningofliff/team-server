@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// NewRouter creates a new instance of mux router
 func NewRouter() *mux.Router {
 
 	router := mux.NewRouter().StrictSlash(true)
@@ -67,6 +68,7 @@ func dumpRequest(r *http.Request) string {
 	return string(requestDump)
 }
 
+// Logger - prints out request information
 func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

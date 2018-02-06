@@ -115,7 +115,7 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tokenInfo.VerifiedEmail {
-		var existingUser = PersonAlreadyExistsByEmail(tokenInfo.Email)
+		var existingUser = PlayerAlreadyExistsByEmail(tokenInfo.Email)
 
 		if !existingUser {
 			// the user does not have an account, we should redirect them to a create profile page
@@ -157,23 +157,16 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// To test that the above "is user" check works, insert them in People so next time we refresh it doesn't do this.
-			// person := Person{}
-			// person.ID = strconv.Itoa(len(people) + 1)
-			// person.Email = userProfile.Email
-			// person.Firstname = userProfile.GivenName
-			// person.Lastname = userProfile.FamilyName
-			// people = append(people, person)
-
 			// session.Values["email"] = userProfile.Email
 			// session.Values["accessToken"] = tkn.AccessToken
 			// session.Save(r, w)
 
 		} else {
-			// the user has an account already, redirect to people.
+			// the user has an account already, redirect to players.
 			pprint(tokenInfo, "Found existing User")
-			w.Header().Set("Authorization", "Bearer "+rawIDToken)
-			http.Redirect(w, r, "/people", 302)
+			// TODO: This won't work - https://stackoverflow.com/questions/36345696/golang-http-redirect-with-headers
+			w.Header().Set("Authorization", fmt.Sprintf("Bearer %s", rawIDToken))
+			http.Redirect(w, r, "/players", 302)
 		}
 	} else {
 		pprint(tokenInfo, "Unverified email in Token")
@@ -183,51 +176,51 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// GetPeople displays all from the people var
-func GetPeople(w http.ResponseWriter, r *http.Request) {
+// GetPlayers displays all from the players var
+func GetPlayers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(people)
+	json.NewEncoder(w).Encode(players)
 }
 
-// GetPerson displays a single data
-func GetPerson(w http.ResponseWriter, r *http.Request) {
+// GetPlayer displays a single data
+func GetPlayer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for _, item := range people {
+	for _, item := range players {
 		if item.ID == params["id"] {
 			json.NewEncoder(w).Encode(item)
 			return
 		}
 	}
-	json.NewEncoder(w).Encode(&Person{})
+	json.NewEncoder(w).Encode(&Player{})
 }
 
-// CreatePerson creates a new item
-func CreatePerson(w http.ResponseWriter, r *http.Request) {
+// CreatePlayer creates a new item
+func CreatePlayer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	// params := mux.Vars(r)
-	var person Person
-	_ = json.NewDecoder(r.Body).Decode(&person)
-	if !PersonAlreadyExistsByEmail(person.Email) {
-		log.Println("Creating Person with email " + person.Email)
-		person.ID = strconv.Itoa(len(people) + 1)
-		people = append(people, person)
+	var player Player
+	_ = json.NewDecoder(r.Body).Decode(&player)
+	if !PlayerAlreadyExistsByEmail(player.Email) {
+		log.Println("Creating Player with email " + player.Email)
+		player.ID = strconv.Itoa(len(players) + 1)
+		players = append(players, player)
 	} else {
-		log.Println("Person already exists with email " + person.Email)
+		log.Println("Person already exists with email " + player.Email)
 	}
 
-	json.NewEncoder(w).Encode(people)
+	json.NewEncoder(w).Encode(players)
 }
 
-// DeletePerson deletes an item
-func DeletePerson(w http.ResponseWriter, r *http.Request) {
+// DeletePlayer deletes an item
+func DeletePlayer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for index, item := range people {
+	for index, item := range players {
 		if item.ID == params["id"] {
-			people = append(people[:index], people[index+1:]...)
+			players = append(players[:index], players[index+1:]...)
 			break
 		}
-		json.NewEncoder(w).Encode(people)
+		json.NewEncoder(w).Encode(players)
 	}
 }
