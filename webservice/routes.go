@@ -1,4 +1,4 @@
-package main
+package webservice
 
 import (
 	"net/http"
@@ -16,28 +16,43 @@ type Route struct {
 type Routes []Route
 
 var routes = Routes{
+	// Front End
+	Route{
+		"WelcomePage",
+		"GET",
+		"/",
+		WelcomePage,
+	},
+	Route{
+		"AuthCallback",
+		"GET",
+		"/oauth2callback",
+		AuthCallback,
+	},
+
+	// Back End
 	Route{
 		"GetPlayers",
 		"GET",
 		"/players",
-		GetPlayers,
+		ValidateHandler(GetPlayers),
 	},
 	Route{
 		"GetPlayer",
 		"GET",
 		"/players/{id}",
-		GetPlayer,
+		ValidateHandler(GetPlayer),
 	},
 	Route{
 		"CreatePlayer",
 		"POST",
-		"/players/{id}",
-		CreatePlayer,
+		"/createPlayer",
+		ValidateHandler(CreatePlayer),
 	},
 	Route{
 		"DeletePlayer",
 		"DELETE",
-		"/people/{id}",
-		DeletePlayer,
+		"/players/{id}",
+		ValidateHandler(DeletePlayer),
 	},
 }

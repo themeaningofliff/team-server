@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>Create Profile</h1>
+
+<form id="createPerson">
+    <div><input id="Firstname" type="text" value="{{printf "%s" .Firstname}}"/></div>
+    <div><input id="Lastname" type="text" value="{{printf "%s" .Lastname}}"/></div>
+    <div><input id="Email" type="text" value="{{printf "%s" .Email}}"/></div>
+    <input id="tokenField" type="hidden" value="{{printf "%s" .tokenField}}"/>
+    <div><input id="submitButton" type="button" value="Create Profile"></div>
+</form>
+
+<script>
+    $('#submitButton').on('click',function() {
+        $.ajax({
+            url: "http://localhost:8080/createPerson",
+            type: 'POST',
+            data: { 
+                    firstname: $('#Firstname').val(),
+                    lastName: $('#Lastname').val(),
+                    email: $('#Email').val()
+                    },
+            contentType: 'application/json',
+            headers: {
+                        "Authorization": "Bearer " + $('#tokenField').val()
+                    },
+            async: false
+                });
+    })
+
+</script>
+
+</body>
+</html>

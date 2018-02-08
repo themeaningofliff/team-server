@@ -1,4 +1,4 @@
-package main
+package webservice
 
 import (
 	"fmt"
@@ -72,9 +72,6 @@ func dumpRequest(r *http.Request) string {
 func Logger(inner http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
-		// default everything to json
-		w.Header().Set("Content-Type", "application/json")
 
 		log.Printf(
 			"START %s\t%s\t%s\n%s\n\n",
