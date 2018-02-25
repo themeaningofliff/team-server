@@ -1,6 +1,9 @@
 package webservice
 
-import "strings"
+import (
+	"fmt"
+	"time"
+)
 
 // Exception wraps a json error message
 type Exception struct {
@@ -22,15 +25,25 @@ type UserInfo struct {
 
 // Player Type (more like an object)
 type Player struct {
-	ID        string   `json:"id,omitempty"`
-	Firstname string   `json:"first_name,omitempty"`
-	Lastname  string   `json:"last_name,omitempty"`
-	Email     string   `json:"email,omitempty"`
-	Phone     string   `json:"phone,omitempty"`
-	Address   *Address `json:"address,omitempty"`
-	CreatedOn string   `json:"created_on,string,omitempty"`
-	Active    bool     `json:"active,omitempty"`
-	SignedUp  bool     `json:"signed_up,omitempty"`
+	ID        int       `json:"id,omitempty"`
+	Firstname string    `json:"first_name,omitempty"`
+	Lastname  string    `json:"last_name,omitempty"`
+	Email     string    `json:"email,omitempty"`
+	Phone     string    `json:"phone,omitempty"`
+	Gender    string    `json:"gender,omitempty"`
+	Address   Address   `json:"address,omitempty"`
+	Active    bool      `json:"active"`
+	SignedUp  bool      `json:"signed_up"`
+	CreatedOn time.Time `json:"created_on,string,omitempty"`
+}
+
+func (p Player) ToString() string {
+	// return fmt.Sprintf("%+v", p)
+	// addString := ""
+	// if p.Address != nil {
+	// 	addString = p.Address.ToString()
+	// }
+	return fmt.Sprintf("Player {%d, %s, %s, %s, %s, %s, %s, %t, %t, %+v}", p.ID, p.Firstname, p.Lastname, p.Email, p.Phone, p.Gender, p.Address.ToString(), p.Active, p.SignedUp, p.CreatedOn)
 }
 
 // Address Type
@@ -41,23 +54,10 @@ type Address struct {
 	Zipcode string `json:"zip_code,omitempty"`
 }
 
-// PlayerAlreadyExistsByEmail checks if a person already exists by email
-func PlayerAlreadyExistsByEmail(email string) bool {
-	// check if the user has an account already.
-	for _, item := range players {
-		// We could actually use Google's UserIDs if we wanted but might not be good if we use another identify provider.
-		// tokenInfo.UserId // "user_id": "100682826382643775970",
-
-		if strings.EqualFold(item.Email, email) { //case insensitve comparison
-			return true
-		}
-	}
-
-	return false
+func (a Address) ToString() string {
+	return fmt.Sprintf("%+v", a)
+	// return fmt.Sprintf("Address {%d, %s, %s, %s}", a.ID, a.City, a.State, a.Zipcode)
 }
-
-// Players - group of players
-var players []Player
 
 // PlayerGames - group of games a player plays
 var playerGames []PlayerGame

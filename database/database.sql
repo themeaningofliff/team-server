@@ -1,7 +1,7 @@
 CREATE DATABASE team_server;
 
 CREATE TABLE IF NOT EXISTS players (
-    id BIGSERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     email VARCHAR(100),
@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS players (
     active BOOLEAN NOT NULL DEFAULT false,
     signed_up BOOLEAN NOT NULL DEFAULT false,
 	created_on TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),		
-		UNIQUE (email, phone)
+    CONSTRAINT players_email_key UNIQUE (email),
+    CONSTRAINT players_phone_key UNIQUE (phone)
 );
 
 CREATE TABLE IF NOT EXISTS gameDefinition ( -- tennis, climbing etc.

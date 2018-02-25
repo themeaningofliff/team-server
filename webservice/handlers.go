@@ -115,11 +115,15 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tokenInfo.VerifiedEmail {
-		var existingUser = PlayerAlreadyExistsByEmail(tokenInfo.Email)
 
-		if !existingUser {
-			// the user does not have an account, we should redirect them to a create profile page
-			// that is pre-populated with details we have got from Google.
+		// TODO: We need to figure out if we will force them to use the same email from the token?
+		player, err := dbGetPlayerByEmail(tokenInfo.Email)
+		existingUser := err == nil // if there has been no error, then we have found an entry.
+
+		if !existingUser || (existingUser && !player.SignedUp) {
+			// the user does not have an account,
+			// or the user has an account but has not signed up,
+			// we should redirect them to a create profile page that is pre-populated with details we have got from Google.
 
 			// Now we have the user's token, we can create a client to hit the Google API we want.
 			client := oauthCfg.Client(oauth2.NoContext, tkn)
@@ -146,6 +150,12 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 				"Email":      userProfile.Email,
 				"tokenField": rawIDToken,
 			}
+
+			if existingUser && !player.SignedUp {
+				log.Println("Non-Signed Up Player is Signing Up! Hooray, crack open the beers!")
+				// TODO: Populate extra information from the registered player?
+			}
+
 			t, err := template.ParseFiles("./webservice/createProfile.html")
 			if err != nil {
 				log.Println("error parsing template " + err.Error())
@@ -179,48 +189,76 @@ func AuthCallback(w http.ResponseWriter, r *http.Request) {
 // GetPlayers displays all from the players var
 func GetPlayers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	players, err := dbGetPlayers()
+	if err != nil {
+		http.Error(w, "Unknown Error", http.StatusInternalServerError)
+		return
+	}
+
 	json.NewEncoder(w).Encode(players)
 }
 
 // GetPlayer displays a single data
 func GetPlayer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	players, err := dbGetPlayers()
+	if err != nil {
+		http.Error(w, "Unknown Error", http.StatusInternalServerError)
+		return
+	}
+
 	params := mux.Vars(r)
 	for _, item := range players {
-		if item.ID == params["id"] {
+		id, _ := strconv.Atoi(params["id"])
+		if item.ID == id {
 			json.NewEncoder(w).Encode(item)
 			return
 		}
 	}
+
 	json.NewEncoder(w).Encode(&Player{})
 }
 
 // CreatePlayer creates a new item
 func CreatePlayer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	// var x = context.Get(r, "user_id")
+	// log.Printf("Blah blah blah %s\n", x)
+
 	// params := mux.Vars(r)
+
 	var player Player
 	_ = json.NewDecoder(r.Body).Decode(&player)
-	if !PlayerAlreadyExistsByEmail(player.Email) {
+	_, err := dbGetPlayerByEmail(player.Email)
+
+	if err != nil && err != ErrNoPlayer {
+		// some other error went down.
+		http.Error(w, "Unknown Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err == ErrNoPlayer {
 		log.Println("Creating Player with email " + player.Email)
-		player.ID = strconv.Itoa(len(players) + 1)
-		players = append(players, player)
+		// TODO: Insert into DB.
+		// player.ID = len(players) + 1
+		// players = append(players, player)
 	} else {
 		log.Println("Person already exists with email " + player.Email)
 	}
 
-	json.NewEncoder(w).Encode(players)
+	// json.NewEncoder(w).Encode(players)
 }
 
 // DeletePlayer deletes an item
 func DeletePlayer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
-	for index, item := range players {
-		if item.ID == params["id"] {
-			players = append(players[:index], players[index+1:]...)
-			break
-		}
-		json.NewEncoder(w).Encode(players)
-	}
+	// params := mux.Vars(r)
+	// for index, item := range players {
+	// 	id, _ := strconv.Atoi(params["id"])
+	// 	if item.ID == id {
+	// 		players = append(players[:index], players[index+1:]...)
+	// 		break
+	// 	}
+	// 	json.NewEncoder(w).Encode(players)
+	// }
 }
