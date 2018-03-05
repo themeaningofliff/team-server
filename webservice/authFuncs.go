@@ -11,6 +11,8 @@ import (
 	oauth2ClientAPI "google.golang.org/api/oauth2/v2"
 )
 
+const DUMMY_TOKEN = "DUMMY_TOKEN"
+
 /*
 	This implementation cheats and uses a Google API to validate the token.
 
@@ -154,12 +156,13 @@ func ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
 				// try the GoogleAPI Token Verifier (under the hood this requires a http call to a Google Endpoint)
 				// according to https://developers.google.com/identity/sign-in/web/backend-auth, there is nothing wrong with using the id token to auth the user.
 
-				if strings.EqualFold("DUMMY_TOKEN", bearerToken[1]) {
+				if strings.EqualFold(DUMMY_TOKEN, bearerToken[1]) {
 					log.Println("Using Dummy Token!")
 
 					// set the necessary details on the context for use in the next handler.
 					context.Set(req, "user_id", "100682826381234567890")
-					context.Set(req, "email", "you@dummy.com")
+					context.Set(req, "dummy_token", true)
+					context.Set(req, "token_email", "you@dummy.com")
 					context.Set(req, "verified_email", true)
 				} else {
 					tokenInfo, err := verifyTokenAPI(bearerToken[1])
@@ -171,7 +174,7 @@ func ValidateHandler(next http.HandlerFunc) http.HandlerFunc {
 
 					// set the necessary details on the context for use in the next handler.
 					context.Set(req, "user_id", tokenInfo.UserId)
-					context.Set(req, "email", tokenInfo.Email)
+					context.Set(req, "token_email", tokenInfo.Email)
 					context.Set(req, "verified_email", tokenInfo.VerifiedEmail)
 				}
 

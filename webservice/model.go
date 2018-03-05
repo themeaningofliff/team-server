@@ -7,9 +7,11 @@ import (
 
 // Exception wraps a json error message
 type Exception struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
+// UserInfo is the json type returned by google api for profile
 type UserInfo struct {
 	Sub           string `json:"sub"`
 	Name          string `json:"name"`
