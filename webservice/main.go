@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	_ "github.com/lib/pq" // postgres library
+
 	oidc "github.com/coreos/go-oidc"
 
 	"golang.org/x/oauth2"
@@ -23,10 +25,12 @@ var oauthCred Credentials
 var oauthCfg *oauth2.Config
 var oauthVerifier *oidc.IDTokenVerifier
 
+// int OAUTH_VERIFIER_TYPE = 0;
+const VerifyOAuthViaGoogleAPI = true
+
 // main function to boot up everything
 func init() {
-	players = append(players, Player{ID: "1", Firstname: "John", Lastname: "Doe", Email: "john@funding.com", Phone: "5555555555", Address: &Address{ID: 1, City: "City X", State: "State X", Zipcode: "11101"}, CreatedOn: "1443492224", Active: true, SignedUp: true})
-	players = append(players, Player{ID: "2", Firstname: "Koko", Lastname: "Doe", Email: "koko@funding.com", Phone: "5555551234", Address: &Address{ID: 2, City: "City Z", State: "State Y", Zipcode: "11101"}, CreatedOn: "1438947306", Active: false, SignedUp: false})
+	initDB()
 
 	// read the credentials.
 	file, err := ioutil.ReadFile("./creds.json")
@@ -51,17 +55,19 @@ func init() {
 		},
 	}
 
-	// construct an oauth verifier for Google Accounts.
-	// TODO: We are using OIDC, a non-Google API to do this. If Google ever releases one, we should use theirs.
-	// https://developers.google.com/identity/sign-in/android/backend-auth
-	provider, err := oidc.NewProvider(oauth2.NoContext, "https://accounts.google.com")
-	if err != nil {
-		log.Fatal(err)
+	if !VerifyOAuthViaGoogleAPI {
+		// construct an offline oauth verifier for Google Accounts.
+		// TODO: We are using OIDC, a non-Google API to do this. If Google ever releases one, we should use theirs.
+		// https://developers.google.com/identity/sign-in/android/backend-auth
+		provider, err := oidc.NewProvider(oauth2.NoContext, "https://accounts.google.com")
+		if err != nil {
+			log.Fatal(err)
+		}
+		oidcConfig := &oidc.Config{
+			ClientID: oauthCred.Cid,
+		}
+		oauthVerifier = provider.Verifier(oidcConfig)
 	}
-	oidcConfig := &oidc.Config{
-		ClientID: oauthCred.Cid,
-	}
-	oauthVerifier = provider.Verifier(oidcConfig)
 
 	// setup router.
 	var router = NewRouter()

@@ -1,0 +1,2 @@
+INSERT INTO public.players(first_name, last_name, email, phone, gender, zipcode, active, signed_up) VALUES ('John', 'Doe', 'john@funding.com', '55555555', 'Male', '1234567', true, false);
+INSERT INTO public.players(first_name, last_name, email, phone, gender, zipcode, active, signed_up) VALUES ('Koko', 'Doe', 'koko@funding.com', '5556666', 'Female', '11101', true, false);

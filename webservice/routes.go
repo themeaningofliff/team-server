@@ -52,7 +52,7 @@ var routes = Routes{
 	Route{
 		"DeletePlayer",
 		"DELETE",
-		"/players/{id}",
+		"/deletePlayer/{id}",
 		ValidateHandler(DeletePlayer),
 	},
 }
